@@ -1,14 +1,14 @@
+pub mod page_io;
+
 use std::{
-    fs::{File, OpenOptions},
-    io::{Seek, Write},
     mem,
     os::unix::prelude::FileExt,
-    path::Path,
+    path::Path
 };
 
-const PAGE_SIZE: usize = 4096;
-const HEADER_SIZE: usize = 12;
-const BODY_SIZE: usize = 4084;
+pub const HEADER_SIZE: usize = 12;
+pub const BODY_SIZE: usize = 4084;
+pub const PAGE_SIZE: usize = 4096;
 
 fn main() {
     println!("Hello, world!");
@@ -17,27 +17,13 @@ fn main() {
     let path = Path::new(file_name);
     let display = path.display();
 
-    // Open the path in read-only mode, returns `io::Result<File>`
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .append(true)
-        .open(path)
-        .unwrap();
+    
 
-    let page_size = 4096;
-
-    let mut buf: &[u8] = &[0, 0, 0, 1, 1];
-    file.write_at(buf, 0);
+  
 }
 
 struct Pointer {
     right: u32,
-}
-
-struct PageU32BodyItem {
-    sid: u16,
-    value: u32,
 }
 
 struct PageU32Body {
