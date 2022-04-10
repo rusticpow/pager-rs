@@ -1,10 +1,7 @@
 pub mod page_io;
+pub mod api;
 
-use std::{
-    mem,
-    os::unix::prelude::FileExt,
-    path::Path
-};
+use std::{mem, os::unix::prelude::FileExt, path::Path};
 
 pub const HEADER_SIZE: usize = 12;
 pub const BODY_SIZE: usize = 4084;
@@ -16,10 +13,6 @@ fn main() {
     let file_name = "hello.db";
     let path = Path::new(file_name);
     let display = path.display();
-
-    
-
-  
 }
 
 struct Pointer {
@@ -84,7 +77,6 @@ impl Page {
         buf[3] = column_id_in_bytes[2];
         buf[4] = column_id_in_bytes[3];
 
-        
         let mut index = 12;
         for i in &self.body.items {
             let value_bytes = i.to_le_bytes();
@@ -93,7 +85,7 @@ impl Page {
             buf[index + 1] = value_bytes[1];
             buf[index + 2] = value_bytes[2];
             buf[index + 3] = value_bytes[3];
-             
+
             index += 4;
         }
 
@@ -142,9 +134,7 @@ mod tests {
                 page_type: PageType::Leaf,
                 column_id: u32::MAX,
             },
-            body: PageU32Body {
-                items: items,
-            },
+            body: PageU32Body { items: items },
         }
         .serialize();
 
