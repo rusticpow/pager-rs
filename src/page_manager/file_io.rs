@@ -1,6 +1,5 @@
 use std::{
-    fs::{File, OpenOptions},
-    io::{Read, Seek, SeekFrom},
+    fs::{File, OpenOptions}
 };
 
 use read_write_at::{ReadAtMut, WriteAt};
@@ -8,13 +7,18 @@ use read_write_at::{ReadAtMut, WriteAt};
 const CONTAINER_EXTENSION: &str = ".container";
 pub const PAGE_SIZE: usize = 4096;
 
-pub struct FileIO {
+pub trait FileIO {
+    fn read(&mut self, page_i: u64) -> Result<Vec<u8>, ()>;
+    fn write(&self, page_content: &[u8], page_i: u64) -> Result<(), ()>;
+}
+
+pub struct FileIOImpl {
     file_path: String,
     file: File,
 }
 
-impl<'a> FileIO {
-    pub fn new(container_name: &str) -> FileIO {
+impl FileIOImpl {
+    pub fn new(container_name: &str) -> FileIOImpl {
         let file_path = get_file_path(container_name);
 
         let result = OpenOptions::new()
@@ -28,13 +32,15 @@ impl<'a> FileIO {
             Err(_) => panic!(), // TODO: temporary
         };
 
-        FileIO {
+        FileIOImpl {
             file_path: file_path,
             file: file,
         }
     }
+}
 
-    pub fn read(&mut self, page_i: u64) -> Result<Vec<u8>, ()> {
+impl<'a> FileIO for FileIOImpl {
+    fn read(&mut self, page_i: u64) -> Result<Vec<u8>, ()> {
         // .. need to support reading
         let chunk: &mut [u8] = &mut [0; PAGE_SIZE];
         let result = self.file.read_exact_at(chunk, page_i * PAGE_SIZE as u64);
@@ -46,7 +52,7 @@ impl<'a> FileIO {
         }
     }
 
-    pub fn write(&self, page_content: &[u8], page_i: u64) -> Result<(), ()> {
+    fn write(&self, page_content: &[u8], page_i: u64) -> Result<(), ()> {
         let result = self
             .file
             .write_all_at(&page_content, page_i * PAGE_SIZE as u64);
@@ -70,11 +76,13 @@ fn get_file_path(container_name: &str) -> String {
 mod tests {
     use std::fs;
 
+    use crate::page_manager::file_io::FileIOImpl;
+
     use super::{FileIO, PAGE_SIZE};
 
     #[test]
     fn write_read_common() {
-        let mut file_io = FileIO::new("testable");
+        let mut file_io = FileIOImpl::new("testable");
 
         let page_content: &mut [u8] = &mut [0; PAGE_SIZE];
         page_content[1] = 5;

@@ -1,21 +1,15 @@
 use crate::{
     container_init::ContainerInitRepository,
-    page_structure::generated::{
-        container_structure_generated::pager::{root_as_container_structure, ContainerStructure},
-        header_generated::pager::root_as_header,
-    },
+    page_structure::generated::header_generated::pager::root_as_header,
 };
-use read_write_at::ReadWriteAt;
 
-use super::file_io::{FileIO, PAGE_SIZE};
+use super::file_io::FileIO;
 
-pub struct ContainerInitRepositoryImpl<'a> {
-    pub file_io: &'a mut FileIO,
-}
+pub struct ContainerInitRepositoryImpl {}
 
-impl<'a> ContainerInitRepository<'a> for ContainerInitRepositoryImpl<'a> {
-    fn get_container_structure(&mut self) -> Result<Vec<u8>, &str> {
-        let result = self.file_io.read(0);
+impl<'a> ContainerInitRepository for ContainerInitRepositoryImpl {
+    fn get_container_structure(&mut self, file_io: &mut impl FileIO) -> Result<Vec<u8>, &str> {
+        let result = file_io.read(0);
         if result.is_err() {
             return Err("page is incorrect");
         }
@@ -35,6 +29,6 @@ impl<'a> ContainerInitRepository<'a> for ContainerInitRepositoryImpl<'a> {
     }
 
     fn set_container_structure(&self, scheme: &crate::unit_scheme::UnitScheme) -> Result<(), &str> {
-        todo!()
+        todo!();
     }
 }
