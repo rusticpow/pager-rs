@@ -1,0 +1,14 @@
+
+namespace Pager;
+ 
+enum PageType:byte { DbStructure = 0  }
+ 
+struct ULongPointer { value: ulong; }
+
+table Header { 
+  type: PageType;
+  continuation: ULongPointer;
+  body_size: ushort;
+}
+
+root_type Header;
