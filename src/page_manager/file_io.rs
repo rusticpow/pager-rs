@@ -6,6 +6,8 @@ use read_write_at::{ReadAtMut, WriteAt};
 
 const CONTAINER_EXTENSION: &str = ".container";
 pub const PAGE_SIZE: usize = 4096;
+pub const BODY_SIZE: usize = 4084;
+pub const HEADER_SIZE: usize = 12;
 
 pub trait FileIO {
     fn read(&mut self, page_i: u64) -> Result<Vec<u8>, ()>;

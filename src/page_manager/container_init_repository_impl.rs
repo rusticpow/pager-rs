@@ -1,9 +1,12 @@
 use crate::{
     container_init::ContainerInitRepository,
-    page_structure::generated::header_generated::pager::root_as_header,
+    page_structure::generated::{
+        container_structure_generated::pager::{ContainerStructure, ContainerStructureArgs},
+        header_generated::pager::root_as_header,
+    },
 };
 
-use super::file_io::FileIO;
+use super::file_io::{FileIO, BODY_SIZE};
 
 pub struct ContainerInitRepositoryImpl {}
 
@@ -23,12 +26,30 @@ impl<'a> ContainerInitRepository for ContainerInitRepositoryImpl {
         }
 
         let header = header_result.unwrap();
-
         let body_slice = &page_buf[(header_size + 1) as usize..(header.body_size() as usize)];
+
         Ok(body_slice.to_vec())
     }
 
-    fn set_container_structure(&self, scheme: &crate::unit_scheme::UnitScheme) -> Result<(), &str> {
-        todo!();
+    fn set_container_structure(
+        &self,
+        scheme: &crate::unit_scheme::UnitScheme,
+        file_io: &mut impl FileIO,
+    ) -> Result<(), &str> {
+        let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(BODY_SIZE);
+        let structure = ContainerStructure::create(
+            &mut builder,
+            &ContainerStructureArgs {
+                scheme_from_page: 1,
+                unit_from_page: 2,
+            },
+        );
+
+        builder.finish(structure, None);
+        let data = builder.finished_data();
+        match file_io.write(data, 0) {
+            Ok(_) => Ok(()),
+            Err(_) => Err("writing is failed"),
+        }
     }
 }

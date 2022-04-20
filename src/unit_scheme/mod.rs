@@ -1,10 +1,10 @@
 pub struct UnitScheme {
-    tables: Vec<UnitTable>,
+    pub tables: Vec<UnitTable>,
 }
 
 pub struct UnitTable {
-    name: String,
-    columns: Vec<UnitColumn>,
+    pub name: String,
+    pub columns: Vec<UnitColumn>,
 }
 
 pub enum UnitColumnType {
@@ -14,7 +14,7 @@ pub enum UnitColumnType {
 }
 
 pub struct UnitColumn {
-    id: u32,
-    name: String,
-    col_type: UnitColumnType
+    pub id: u32,
+    pub name: String,
+    pub col_type: UnitColumnType
 }

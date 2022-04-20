@@ -15,7 +15,11 @@ pub struct ContainerInitRepo {}
 
 pub trait ContainerInitRepository {
     fn get_container_structure(&mut self, file_io: &mut impl FileIO) -> Result<Vec<u8>, &str>;
-    fn set_container_structure(&self, scheme: &UnitScheme) -> Result<(), &str>;
+    fn set_container_structure(
+        &self,
+        scheme: &UnitScheme,
+        file_io: &mut impl FileIO
+    ) -> Result<(), &str>;
 }
 
 impl<'a> ContainerInit<'a> {
@@ -33,7 +37,7 @@ impl<'a> ContainerInit<'a> {
         match structure_result {
             Ok(buf) => {}
             Err(_) => {
-                repository.set_container_structure(scheme);
+                repository.set_container_structure(scheme, file_io);
             }
         }
     }
