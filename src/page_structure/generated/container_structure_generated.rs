@@ -42,6 +42,7 @@ impl<'a> ContainerStructure<'a> {
         _fbb: &'mut_bldr mut flatbuffers::FlatBufferBuilder<'bldr>,
         args: &'args ContainerStructureArgs) -> flatbuffers::WIPOffset<ContainerStructure<'bldr>> {
       let mut builder = ContainerStructureBuilder::new(_fbb);
+      builder.add_pages(args.pages);
       builder.add_unit_from_page(args.unit_from_page);
       builder.add_scheme_from_page(args.scheme_from_page);
       builder.finish()
@@ -49,6 +50,7 @@ impl<'a> ContainerStructure<'a> {
 
     pub const VT_SCHEME_FROM_PAGE: flatbuffers::VOffsetT = 4;
     pub const VT_UNIT_FROM_PAGE: flatbuffers::VOffsetT = 6;
+    pub const VT_PAGES: flatbuffers::VOffsetT = 8;
 
   #[inline]
   pub fn scheme_from_page(&self) -> u64 {
@@ -57,6 +59,10 @@ impl<'a> ContainerStructure<'a> {
   #[inline]
   pub fn unit_from_page(&self) -> u64 {
     self._tab.get::<u64>(ContainerStructure::VT_UNIT_FROM_PAGE, Some(0)).unwrap()
+  }
+  #[inline]
+  pub fn pages(&self) -> u64 {
+    self._tab.get::<u64>(ContainerStructure::VT_PAGES, Some(0)).unwrap()
   }
 }
 
@@ -69,6 +75,7 @@ impl flatbuffers::Verifiable for ContainerStructure<'_> {
     v.visit_table(pos)?
      .visit_field::<u64>(&"scheme_from_page", Self::VT_SCHEME_FROM_PAGE, false)?
      .visit_field::<u64>(&"unit_from_page", Self::VT_UNIT_FROM_PAGE, false)?
+     .visit_field::<u64>(&"pages", Self::VT_PAGES, false)?
      .finish();
     Ok(())
   }
@@ -76,6 +83,7 @@ impl flatbuffers::Verifiable for ContainerStructure<'_> {
 pub struct ContainerStructureArgs {
     pub scheme_from_page: u64,
     pub unit_from_page: u64,
+    pub pages: u64,
 }
 impl<'a> Default for ContainerStructureArgs {
     #[inline]
@@ -83,6 +91,7 @@ impl<'a> Default for ContainerStructureArgs {
         ContainerStructureArgs {
             scheme_from_page: 0,
             unit_from_page: 0,
+            pages: 0,
         }
     }
 }
@@ -98,6 +107,10 @@ impl<'a: 'b, 'b> ContainerStructureBuilder<'a, 'b> {
   #[inline]
   pub fn add_unit_from_page(&mut self, unit_from_page: u64) {
     self.fbb_.push_slot::<u64>(ContainerStructure::VT_UNIT_FROM_PAGE, unit_from_page, 0);
+  }
+  #[inline]
+  pub fn add_pages(&mut self, pages: u64) {
+    self.fbb_.push_slot::<u64>(ContainerStructure::VT_PAGES, pages, 0);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a>) -> ContainerStructureBuilder<'a, 'b> {
@@ -119,6 +132,7 @@ impl std::fmt::Debug for ContainerStructure<'_> {
     let mut ds = f.debug_struct("ContainerStructure");
       ds.field("scheme_from_page", &self.scheme_from_page());
       ds.field("unit_from_page", &self.unit_from_page());
+      ds.field("pages", &self.pages());
       ds.finish()
   }
 }

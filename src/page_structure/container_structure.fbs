@@ -1,9 +1,0 @@
-namespace Pager;
-
-table ContainerStructure { 
-    scheme_from_page: ulong;
-    unit_from_page: ulong;
-    
-}
-
-root_type ContainerStructure;

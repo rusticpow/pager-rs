@@ -1,0 +1,25 @@
+namespace Pager;
+
+enum ColumnType : ubyte {
+    Dynamic = 0,
+    Identity = 1
+}
+
+table UnitColumn {
+    id: uint;
+    name: string;
+    type: ColumnType;
+    clock_page: ulong;
+    data_page: ulong;
+}
+
+table UnitTable {
+    name: string;
+    columns: [UnitColumn];
+}
+
+table UnitScheme { 
+    tables: [UnitTable];
+}
+
+root_type UnitScheme;
