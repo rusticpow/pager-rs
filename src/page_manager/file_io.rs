@@ -13,13 +13,13 @@ pub const HEADER_CAPACITY: usize = 23; // 1 + 23 bytes, where the first bytes is
 pub const BODY_CAPACITY: usize = 4072;
 
 pub trait FileIO {
-    fn read(&mut self, start_page_id: u64) -> Result<Vec<u8>, &str>;
-    fn write(
-        &self,
-        page_type: PageType,
-        content_body: &[u8],
-        start_page_id: Option<u64>,
-    ) -> Result<u64, ()>;
+    fn read(&mut self, start_page_id: u64) -> Result<Structure, &str>;
+    fn write(&self, page_type: PageType, structure: &Structure) -> Result<u64, ()>;
+}
+
+pub struct Structure {
+    pub content: Vec<u8>,
+    pub pages: Vec<u64>,
 }
 
 pub struct FileIOImpl {
@@ -57,11 +57,13 @@ impl FileIOImpl {
 }
 
 impl<'a> FileIO for FileIOImpl {
-    fn read(&mut self, start_page_id: u64) -> Result<Vec<u8>, &str> {
+    fn read(&mut self, start_page_id: u64) -> Result<Structure, &str> {
         let mut page_index = start_page_id;
         let mut total_buf: Vec<u8> = Vec::new();
-
+        let mut pages: Vec<u64> = Vec::new();
         loop {
+            pages.push(page_index);
+
             let page_buf: &mut [u8] = &mut [0; PAGE_SIZE];
             self.file
                 .read_exact_at(page_buf, page_index * PAGE_SIZE as u64)
@@ -80,24 +82,26 @@ impl<'a> FileIO for FileIOImpl {
             }
         }
 
-        Ok(total_buf)
+        Ok(Structure {
+            content: total_buf,
+            pages: pages,
+        })
     }
 
-    fn write(
-        &self,
-        page_type: PageType,
-        content_body: &[u8],
-        start_page_id: Option<u64>,
-    ) -> Result<u64, ()> {
+    fn write(&self, page_type: PageType, structure: &Structure) -> Result<u64, ()> {
         let mut page_body_chunks: Vec<Vec<u8>> = Vec::new();
 
-        fill_chunks(content_body, &mut page_body_chunks, BODY_CAPACITY);
+        fill_chunks(&structure.content, &mut page_body_chunks, BODY_CAPACITY);
 
         let free_page_identifiers = get_free_page_identifiers(&self.file, page_body_chunks.len());
         for (index, page_body) in page_body_chunks.iter().enumerate() {
-            let next_page_id: u64 =
-                get_next_page_id(index, page_body_chunks.len(), &free_page_identifiers);
-            let body_size = get_body_size(index, page_body_chunks.len(), content_body.len());
+            let next_page_id: u64 = get_next_page_id(
+                index,
+                page_body_chunks.len(),
+                structure,
+                &free_page_identifiers,
+            );
+            let body_size = get_body_size(index, page_body_chunks.len(), structure.content.len());
 
             let page_buf: &mut [u8] = &mut [0; PAGE_SIZE];
 
@@ -146,6 +150,7 @@ fn get_body_size(
 fn get_next_page_id(
     current_index: usize,
     page_body_chunks_length: usize,
+    structure: &Structure,
     free_page_identifiers: &[u64],
 ) -> u64 {
     if page_body_chunks_length == 1 {
@@ -159,11 +164,7 @@ fn get_next_page_id(
     }
 }
 
-fn fill_chunks<'a>(
-    content_body: &'a [u8],
-    page_body_chunks: &mut Vec<Vec<u8>>,
-    chunk_size: usize,
-) {
+fn fill_chunks<'a>(content_body: &'a [u8], page_body_chunks: &mut Vec<Vec<u8>>, chunk_size: usize) {
     let content_chunks: Vec<&[u8]> = content_body.chunks(chunk_size).collect();
 
     for chunk in content_chunks {
@@ -200,7 +201,7 @@ mod tests {
 
     use ulid::Ulid;
 
-    use crate::page_manager::file_io::{FileIOImpl, PageType};
+    use crate::page_manager::file_io::{FileIOImpl, PageType, Structure};
 
     use super::{fill_chunks, FileIO, BODY_CAPACITY};
 
@@ -213,13 +214,19 @@ mod tests {
         page_content[4071] = 10;
 
         let result = file_io
-            .write(PageType::Scheme, page_content, Some(0))
+            .write(
+                PageType::Scheme,
+                &Structure {
+                    content: page_content.to_vec(),
+                    pages: vec![0u64],
+                },
+            )
             .unwrap();
 
         let page = file_io.read(result).unwrap();
 
-        assert_eq!(page[0], 5);
-        assert_eq!(page[4071], 10);
+        assert_eq!(page.content[0], 5);
+        assert_eq!(page.content[4071], 10);
 
         fs::remove_file(file_io.file_path).unwrap();
     }
@@ -234,18 +241,25 @@ mod tests {
         page_content[4171] = 200;
 
         let result = file_io
-            .write(PageType::Scheme, page_content, Some(0))
+            .write(
+                PageType::Scheme,
+                &Structure {
+                    content: page_content.to_vec(),
+                    pages: vec![0u64],
+                },
+            )
             .unwrap();
 
         let page = file_io.read(result).unwrap();
 
-        assert_eq!(page[0], 5);
-        assert_eq!(page[4071], 10);
-        assert_eq!(page[4171], 200);
+        assert_eq!(page.content[0], 5);
+        assert_eq!(page.content[4071], 10);
+        assert_eq!(page.content[4171], 200);
 
         fs::remove_file(file_io.file_path).unwrap();
     }
 
+    #[test]
     fn write_replace_pages_of_the_same_structure() {
         let mut file_io = FileIOImpl::new(Ulid::new().to_string().as_str());
 
@@ -257,16 +271,22 @@ mod tests {
             page_content[8243] = 255;
 
             let result = file_io
-                .write(PageType::Scheme, page_content, Some(0))
+                .write(
+                    PageType::Scheme,
+                    &Structure {
+                        content: page_content.to_vec(),
+                        pages: vec![0u64],
+                    },
+                )
                 .unwrap();
 
             let page = file_io.read(result).unwrap();
 
             assert_eq!(result, 0);
-            assert_eq!(page[0], 5);
-            assert_eq!(page[4071], 10);
-            assert_eq!(page[4171], 200);
-            assert_eq!(page[8243], 255);
+            assert_eq!(page.content[0], 5);
+            assert_eq!(page.content[4071], 10);
+            assert_eq!(page.content[4171], 200);
+            assert_eq!(page.content[8243], 255);
         }
 
         {
@@ -277,16 +297,22 @@ mod tests {
             page_content[8443] = 155;
 
             let result = file_io
-                .write(PageType::Scheme, page_content, Some(0))
+                .write(
+                    PageType::Scheme,
+                    &Structure {
+                        content: page_content.to_vec(),
+                        pages: vec![0u64],
+                    },
+                )
                 .unwrap();
 
             let page = file_io.read(result).unwrap();
 
             assert_eq!(result, 0);
-            assert_eq!(page[0], 5);
-            assert_eq!(page[4071], 10);
-            assert_eq!(page[4171], 100);
-            assert_eq!(page[8443], 155);
+            assert_eq!(page.content[0], 5);
+            assert_eq!(page.content[4071], 10);
+            assert_eq!(page.content[4171], 100);
+            assert_eq!(page.content[8443], 155);
         }
     }
 
