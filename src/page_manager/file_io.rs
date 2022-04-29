@@ -17,6 +17,10 @@ pub trait FileIO {
     fn write(&self, page_type: PageType, structure: &Structure) -> Result<u64, ()>;
 }
 
+pub trait PagesPointer {
+    fn get_identifiers(file_size: u64, pages_length: usize, structure: &Structure) -> Vec<u64>;
+}
+
 pub struct Structure {
     pub content: Vec<u8>,
     pub pages: Vec<u64>,
@@ -93,7 +97,8 @@ impl<'a> FileIO for FileIOImpl {
 
         fill_chunks(&structure.content, &mut page_body_chunks, BODY_CAPACITY);
 
-        let free_page_identifiers = get_free_page_identifiers(&self.file, page_body_chunks.len());
+        let free_page_identifiers =
+            get_free_page_identifiers(self.file.metadata().unwrap().len(), page_body_chunks.len());
         for (index, page_body) in page_body_chunks.iter().enumerate() {
             let next_page_id: u64 = get_next_page_id(
                 index,
@@ -147,6 +152,20 @@ fn get_body_size(
     body_size
 }
 
+fn get_pages(
+    file_size: u64,
+    page_body_chunks_length: usize,
+    structure: &Structure,
+    free_pages: impl PagesPointer,
+) -> Vec<u64> {
+    let mut pages: Vec<u64> = Vec::new();
+    let mut free_page_identifiers = get_free_page_identifiers(file_size, page_body_chunks_length);
+
+    // structure.pages[];
+
+    pages
+}
+
 fn get_next_page_id(
     current_index: usize,
     page_body_chunks_length: usize,
@@ -154,7 +173,11 @@ fn get_next_page_id(
     free_page_identifiers: &[u64],
 ) -> u64 {
     if page_body_chunks_length == 1 {
-        0
+        if structure.pages.len() > 0 {
+            structure.pages[0]
+        } else {
+            free_page_identifiers[0]
+        }
     } else {
         if current_index == page_body_chunks_length - 1 {
             0
@@ -183,9 +206,8 @@ fn get_file_path(unit_name: &str) -> String {
     owned_string
 }
 
-fn get_free_page_identifiers(file: &File, length: usize) -> Vec<u64> {
-    let size = file.metadata().unwrap().len();
-    let pages = (size as f64 / PAGE_SIZE as f64).ceil() as u64;
+fn get_free_page_identifiers(file_size: u64, length: usize) -> Vec<u64> {
+    let pages = (file_size as f64 / PAGE_SIZE as f64).ceil() as u64;
 
     let mut result = vec![];
     for id in pages..length as u64 {
@@ -201,9 +223,11 @@ mod tests {
 
     use ulid::Ulid;
 
-    use crate::page_manager::file_io::{FileIOImpl, PageType, Structure};
+    use crate::page_manager::{
+        file_io::{FileIOImpl, PageType, Structure}, pages_pointer::PagesPointerImpl
+    };
 
-    use super::{fill_chunks, FileIO, BODY_CAPACITY};
+    use super::{fill_chunks, get_pages, FileIO, BODY_CAPACITY};
 
     #[test]
     fn write_read_one_page_data() {
@@ -326,5 +350,18 @@ mod tests {
 
         assert_eq!(3, chunks.len());
         assert_eq!(4072, chunks[2].len());
+    }
+
+    #[test]
+    fn get_pages_when_pages_empty_use_free_pages() {
+        get_pages(
+            1,
+            2,
+            &Structure {
+                content: todo!(),
+                pages: todo!(),
+            },
+            PagesPointerImpl {},
+        );
     }
 }
