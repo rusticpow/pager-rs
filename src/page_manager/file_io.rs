@@ -18,12 +18,17 @@ pub trait FileIO {
 }
 
 pub trait PagesPointer {
-    fn get_identifiers(file_size: u64, pages_length: usize, structure: &Structure) -> Vec<u64>;
+    fn get_identifiers(file_size: u64, pages_length: usize, structure: &StructurePages)
+        -> Vec<u64>;
+}
+
+pub struct StructurePages {
+    pub value: Vec<u64>,
 }
 
 pub struct Structure {
     pub content: Vec<u8>,
-    pub pages: Vec<u64>,
+    pub pages: StructurePages,
 }
 
 pub struct FileIOImpl {
@@ -88,7 +93,7 @@ impl<'a> FileIO for FileIOImpl {
 
         Ok(Structure {
             content: total_buf,
-            pages: pages,
+            pages: StructurePages { value: pages },
         })
     }
 
@@ -173,8 +178,8 @@ fn get_next_page_id(
     free_page_identifiers: &[u64],
 ) -> u64 {
     if page_body_chunks_length == 1 {
-        if structure.pages.len() > 0 {
-            structure.pages[0]
+        if structure.pages.value.len() > 0 {
+            structure.pages.value[0]
         } else {
             free_page_identifiers[0]
         }
@@ -224,7 +229,8 @@ mod tests {
     use ulid::Ulid;
 
     use crate::page_manager::{
-        file_io::{FileIOImpl, PageType, Structure}, pages_pointer::PagesPointerImpl
+        file_io::{FileIOImpl, PageType, Structure, StructurePages},
+        pages_pointer::PagesPointerImpl,
     };
 
     use super::{fill_chunks, get_pages, FileIO, BODY_CAPACITY};
@@ -242,7 +248,7 @@ mod tests {
                 PageType::Scheme,
                 &Structure {
                     content: page_content.to_vec(),
-                    pages: vec![0u64],
+                    pages: StructurePages { value: vec![0u64] },
                 },
             )
             .unwrap();
@@ -269,7 +275,7 @@ mod tests {
                 PageType::Scheme,
                 &Structure {
                     content: page_content.to_vec(),
-                    pages: vec![0u64],
+                    pages: StructurePages { value: vec![0u64] },
                 },
             )
             .unwrap();
@@ -299,7 +305,7 @@ mod tests {
                     PageType::Scheme,
                     &Structure {
                         content: page_content.to_vec(),
-                        pages: vec![0u64],
+                        pages: StructurePages { value: vec![0u64] },
                     },
                 )
                 .unwrap();
@@ -325,7 +331,7 @@ mod tests {
                     PageType::Scheme,
                     &Structure {
                         content: page_content.to_vec(),
-                        pages: vec![0u64],
+                        pages: StructurePages { value: vec![0u64] },
                     },
                 )
                 .unwrap();
