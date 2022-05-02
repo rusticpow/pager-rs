@@ -11,4 +11,5 @@ flatbuffers = "2.1.1"
 flexbuffers = "2.0.0"
 lazy_static = "1.4.0"
 ulid = "0.5.0"
-
+serde = "1.0.137"
+serde_derive = "1.0.137"
