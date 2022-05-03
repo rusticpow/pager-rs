@@ -4,6 +4,7 @@ pub struct PagesPointerImpl {}
 
 impl PagesPointer for PagesPointerImpl {
     fn get_identifiers(
+        &self,
         file_size: u64,
         content_chunks_len: usize,
         structure_pages: &StructurePages,
@@ -78,7 +79,7 @@ mod tests {
 
     #[test]
     fn get_identifiers_when_file_size_zero_and_no_structure_pages_return_new_pages() {
-        let ids = PagesPointerImpl::get_identifiers(0, 3, &StructurePages { value: vec![] });
+        let ids = PagesPointerImpl{}.get_identifiers(0, 3, &StructurePages { value: vec![] });
 
         assert_eq![3, ids.len()];
         assert_eq![0, ids[0]];
@@ -88,7 +89,7 @@ mod tests {
 
     #[test]
     fn get_identifiers_when_file_has_size_and_no_structure_pages_return_new_pages() {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64,
             3,
             &StructurePages { value: vec![] },
@@ -102,7 +103,7 @@ mod tests {
 
     #[test]
     fn get_identifiers_with_structure_pages_equals_content_size_pages_return_structure_pages() {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 6,
             3,
             &StructurePages {
@@ -119,7 +120,7 @@ mod tests {
     #[test]
     fn get_identifiers_with_structure_pages_less_than_content_size_pages_return_structure_pages_plus_free_pages(
     ) {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 6,
             4,
             &StructurePages { value: vec![3, 4] },
@@ -134,7 +135,7 @@ mod tests {
 
     #[test]
     fn get_identifiers_with_structure_page_more_than_content_size_pages_return_structure_pages() {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 7,
             2,
             &StructurePages {
@@ -152,7 +153,7 @@ mod tests {
 
     #[test]
     fn get_identifiers_when_content_chunks_len_zero_structure_pages_len_zero_return_empty() {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 4,
             0,
             &StructurePages { value: vec![] },
@@ -164,7 +165,7 @@ mod tests {
     #[test]
     fn get_identifiers_when_content_chunks_len_zero_but_has_structure_pages_len_return_structure_pages(
     ) {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 4,
             0,
             &StructurePages {
@@ -180,7 +181,7 @@ mod tests {
 
     #[test]
     fn get_identifiers_when_file_size_zero_return_structure_and_free_pages() {
-        let ids = PagesPointerImpl::get_identifiers(0, 2, &StructurePages { value: vec![0, 1, 2] });
+        let ids = PagesPointerImpl{}.get_identifiers(0, 2, &StructurePages { value: vec![0, 1, 2] });
 
         assert_eq![3, ids.len()];
         assert_eq![0, ids[0]];
@@ -191,7 +192,7 @@ mod tests {
     #[test]
     fn get_identifiers_when_structure_pages_has_some_of_existing_return_mix_of_structure_and_free_pages(
     ) {
-        let ids = PagesPointerImpl::get_identifiers(
+        let ids = PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 4,
             5,
             &StructurePages { value: vec![1, 3] },
@@ -208,7 +209,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn get_identifiers_when_structure_pages_contains_not_existing_no_zero_page_panic() {
-        PagesPointerImpl::get_identifiers(
+        PagesPointerImpl{}.get_identifiers(
             PAGE_SIZE as u64 * 4,
             5,
             &StructurePages {

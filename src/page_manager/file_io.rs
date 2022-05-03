@@ -1,7 +1,6 @@
 use core::panic;
 use std::fs::{File, OpenOptions};
 
-use flexbuffers::{Builder, Reader};
 use read_write_at::{ReadAtMut, WriteAt};
 
 use super::page_header::Header;
@@ -14,12 +13,21 @@ pub const BODY_CAPACITY: usize = 4072;
 
 pub trait FileIO {
     fn read(&mut self, start_page_id: u64) -> Result<Structure, &str>;
-    fn write(&self, page_type: PageType, structure: &Structure) -> Result<u64, ()>;
+    fn write(
+        &self,
+        page_pointer: &impl PagesPointer,
+        page_type: PageType,
+        structure: &Structure,
+    ) -> Result<Option<u64>, ()>;
 }
 
 pub trait PagesPointer {
-    fn get_identifiers(file_size: u64, pages_length: usize, structure: &StructurePages)
-        -> Vec<u64>;
+    fn get_identifiers(
+        &self,
+        file_size: u64,
+        pages_length: usize,
+        structure: &StructurePages,
+    ) -> Vec<u64>;
 }
 
 pub struct StructurePages {
@@ -97,20 +105,29 @@ impl<'a> FileIO for FileIOImpl {
         })
     }
 
-    fn write(&self, page_type: PageType, structure: &Structure) -> Result<u64, ()> {
+    fn write(
+        &self,
+        pages_pointer: &impl PagesPointer,
+        page_type: PageType,
+        structure: &Structure,
+    ) -> Result<Option<u64>, ()> {
         let mut page_body_chunks: Vec<Vec<u8>> = Vec::new();
 
         fill_chunks(&structure.content, &mut page_body_chunks, BODY_CAPACITY);
 
-        let free_page_identifiers =
-            get_free_page_identifiers(self.file.metadata().unwrap().len(), page_body_chunks.len());
+        let page_identifiers = pages_pointer.get_identifiers(
+            self.file.metadata().unwrap().len(),
+            page_body_chunks.len(),
+            &structure.pages,
+        );
+
         for (index, page_body) in page_body_chunks.iter().enumerate() {
-            let next_page_id: u64 = get_next_page_id(
-                index,
-                page_body_chunks.len(),
-                structure,
-                &free_page_identifiers,
-            );
+            let next_page_id = if page_identifiers.len() - 1 >= index + 1 {
+                page_identifiers[index + 1]
+            } else {
+                0
+            };
+
             let body_size = get_body_size(index, page_body_chunks.len(), structure.content.len());
 
             let page_buf: &mut [u8] = &mut [0; PAGE_SIZE];
@@ -129,11 +146,15 @@ impl<'a> FileIO for FileIOImpl {
             }
 
             self.file
-                .write_all_at(&page_buf, free_page_identifiers[index] * PAGE_SIZE as u64)
+                .write_all_at(&page_buf, page_identifiers[index] * PAGE_SIZE as u64)
                 .expect("Page writing failed");
         }
 
-        Ok(free_page_identifiers[0])
+        Ok(if page_identifiers.len() > 0 {
+            Some(page_identifiers[0])
+        } else {
+            None
+        })
     }
 }
 
@@ -142,54 +163,16 @@ fn get_body_size(
     page_body_chunks_length: usize,
     content_body_length: usize,
 ) -> u16 {
-    let mut body_size = BODY_CAPACITY as u16;
-    if page_body_chunks_length != 1 {
-        if current_index == page_body_chunks_length - 1 {
-            body_size = (content_body_length % BODY_CAPACITY) as u16;
-            if body_size == 0 {
-                body_size = BODY_CAPACITY as u16;
-            }
-        } else {
+    if current_index == page_body_chunks_length - 1 {
+        let mut body_size = (content_body_length % BODY_CAPACITY) as u16;
+        if body_size == 0 {
             body_size = BODY_CAPACITY as u16;
         }
+
+        return body_size;
     }
 
-    body_size
-}
-
-fn get_pages(
-    file_size: u64,
-    page_body_chunks_length: usize,
-    structure: &Structure,
-    free_pages: impl PagesPointer,
-) -> Vec<u64> {
-    let mut pages: Vec<u64> = Vec::new();
-    let mut free_page_identifiers = get_free_page_identifiers(file_size, page_body_chunks_length);
-
-    // structure.pages[];
-
-    pages
-}
-
-fn get_next_page_id(
-    current_index: usize,
-    page_body_chunks_length: usize,
-    structure: &Structure,
-    free_page_identifiers: &[u64],
-) -> u64 {
-    if page_body_chunks_length == 1 {
-        if structure.pages.value.len() > 0 {
-            structure.pages.value[0]
-        } else {
-            free_page_identifiers[0]
-        }
-    } else {
-        if current_index == page_body_chunks_length - 1 {
-            0
-        } else {
-            free_page_identifiers[current_index + 1]
-        }
-    }
+    return BODY_CAPACITY as u16;
 }
 
 fn fill_chunks<'a>(content_body: &'a [u8], page_body_chunks: &mut Vec<Vec<u8>>, chunk_size: usize) {
@@ -211,17 +194,6 @@ fn get_file_path(unit_name: &str) -> String {
     owned_string
 }
 
-fn get_free_page_identifiers(file_size: u64, length: usize) -> Vec<u64> {
-    let pages = (file_size as f64 / PAGE_SIZE as f64).ceil() as u64;
-
-    let mut result = vec![];
-    for id in pages..length as u64 {
-        result.push(id);
-    }
-
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -229,14 +201,29 @@ mod tests {
     use ulid::Ulid;
 
     use crate::page_manager::{
-        file_io::{FileIOImpl, PageType, Structure, StructurePages},
+        file_io::{FileIOImpl, PageType, PagesPointer, Structure, StructurePages},
         pages_pointer::PagesPointerImpl,
     };
 
-    use super::{fill_chunks, get_pages, FileIO, BODY_CAPACITY};
+    use super::{fill_chunks, FileIO, BODY_CAPACITY};
+
+    struct FakePagePointer {
+        identifiers: Vec<u64>,
+    }
+
+    impl PagesPointer for FakePagePointer {
+        fn get_identifiers(
+            &self,
+            _file_size: u64,
+            _pages_length: usize,
+            _structure: &StructurePages,
+        ) -> Vec<u64> {
+            self.identifiers.to_vec()
+        }
+    }
 
     #[test]
-    fn write_read_one_page_data() {
+    fn write_read_one_page_data_with_full_body() {
         let mut file_io = FileIOImpl::new(Ulid::new().to_string().as_str());
 
         let page_content: &mut [u8] = &mut [0; BODY_CAPACITY];
@@ -245,6 +232,9 @@ mod tests {
 
         let result = file_io
             .write(
+                &FakePagePointer {
+                    identifiers: vec![0],
+                },
                 PageType::Scheme,
                 &Structure {
                     content: page_content.to_vec(),
@@ -253,10 +243,40 @@ mod tests {
             )
             .unwrap();
 
-        let page = file_io.read(result).unwrap();
+        let page = file_io.read(result.unwrap()).unwrap();
 
         assert_eq!(page.content[0], 5);
         assert_eq!(page.content[4071], 10);
+
+        fs::remove_file(file_io.file_path).unwrap();
+    }
+
+    #[test]
+    fn write_read_one_page_data_with_partial_data() {
+        let mut file_io = FileIOImpl::new(Ulid::new().to_string().as_str());
+
+        let page_content: &mut [u8] = &mut [0; 300];
+        page_content[0] = 5;
+        page_content[299] = 10;
+
+        let result = file_io
+            .write(
+                &FakePagePointer {
+                    identifiers: vec![0],
+                },
+                PageType::Scheme,
+                &Structure {
+                    content: page_content.to_vec(),
+                    pages: StructurePages { value: vec![0u64] },
+                },
+            )
+            .unwrap();
+
+        let page = file_io.read(result.unwrap()).unwrap();
+
+        assert_eq!(page.content.len(), 300);
+        assert_eq!(page.content[0], 5);
+        assert_eq!(page.content[299], 10);
 
         fs::remove_file(file_io.file_path).unwrap();
     }
@@ -272,6 +292,9 @@ mod tests {
 
         let result = file_io
             .write(
+                &FakePagePointer {
+                    identifiers: vec![0, 1],
+                },
                 PageType::Scheme,
                 &Structure {
                     content: page_content.to_vec(),
@@ -280,7 +303,7 @@ mod tests {
             )
             .unwrap();
 
-        let page = file_io.read(result).unwrap();
+        let page = file_io.read(result.unwrap()).unwrap();
 
         assert_eq!(page.content[0], 5);
         assert_eq!(page.content[4071], 10);
@@ -290,7 +313,7 @@ mod tests {
     }
 
     #[test]
-    fn write_replace_pages_of_the_same_structure() {
+    fn write_replace_pages_with_same_structure() {
         let mut file_io = FileIOImpl::new(Ulid::new().to_string().as_str());
 
         {
@@ -302,12 +325,16 @@ mod tests {
 
             let result = file_io
                 .write(
+                    &FakePagePointer {
+                        identifiers: vec![0, 1, 2],
+                    },
                     PageType::Scheme,
                     &Structure {
                         content: page_content.to_vec(),
                         pages: StructurePages { value: vec![0u64] },
                     },
                 )
+                .unwrap()
                 .unwrap();
 
             let page = file_io.read(result).unwrap();
@@ -328,22 +355,27 @@ mod tests {
 
             let result = file_io
                 .write(
+                    &FakePagePointer { identifiers: vec![0,1,2]},
                     PageType::Scheme,
                     &Structure {
                         content: page_content.to_vec(),
                         pages: StructurePages { value: vec![0u64] },
                     },
                 )
+                .unwrap()
                 .unwrap();
 
             let page = file_io.read(result).unwrap();
 
             assert_eq!(result, 0);
+            assert_eq!(8444, page.content.len());
             assert_eq!(page.content[0], 5);
             assert_eq!(page.content[4071], 10);
             assert_eq!(page.content[4171], 100);
             assert_eq!(page.content[8443], 155);
         }
+
+        fs::remove_file(file_io.file_path).unwrap();
     }
 
     #[test]
@@ -356,18 +388,5 @@ mod tests {
 
         assert_eq!(3, chunks.len());
         assert_eq!(4072, chunks[2].len());
-    }
-
-    #[test]
-    fn get_pages_when_pages_empty_use_free_pages() {
-        get_pages(
-            1,
-            2,
-            &Structure {
-                content: todo!(),
-                pages: todo!(),
-            },
-            PagesPointerImpl {},
-        );
     }
 }
