@@ -1,1 +1,0 @@
-pub mod container_structure_generated;
