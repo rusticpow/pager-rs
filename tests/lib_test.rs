@@ -1,4 +1,4 @@
-use std::fs::{File, self};
+use std::fs::{self};
 
 use pager_rs::{
     Api, structures::scheme_structure::{UnitScheme, UnitTable, UnitColumn, UnitColumnType}

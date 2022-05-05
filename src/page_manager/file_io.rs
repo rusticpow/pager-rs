@@ -1,6 +1,6 @@
 use core::panic;
-use std::fs::{File, OpenOptions};
 use read_write_at::{ReadAtMut, WriteAt};
+use std::fs::{File, OpenOptions};
 
 use super::page_header::Header;
 
@@ -199,9 +199,8 @@ mod tests {
 
     use ulid::Ulid;
 
-    use crate::page_manager::{
-        file_io::{FileIOImpl, PageType, PagesPointer, Structure, StructurePages},
-        pages_pointer::PagesPointerImpl,
+    use crate::page_manager::file_io::{
+        FileIOImpl, PageType, PagesPointer, Structure, StructurePages,
     };
 
     use super::{fill_chunks, FileIO, BODY_CAPACITY};
@@ -354,7 +353,9 @@ mod tests {
 
             let result = file_io
                 .write(
-                    &FakePagePointer { identifiers: vec![0,1,2]},
+                    &FakePagePointer {
+                        identifiers: vec![0, 1, 2],
+                    },
                     PageType::Scheme,
                     &Structure {
                         content: page_content.to_vec(),
