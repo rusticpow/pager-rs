@@ -1,6 +1,4 @@
-use crate::page_manager::{file_io::{FileIO, PageType, Structure, StructurePages}, pages_pointer::PagesPointerImpl};
-
-use super::UnitScheme;
+use crate::{page_manager::{file_io::{FileIO, PageType, Structure, StructurePages}, pages_pointer::PagesPointerImpl}, structures::scheme_structure::{UnitColumnType, UnitScheme}};
 
 pub struct UnitSchemeReadWrite {}
 
@@ -26,4 +24,19 @@ impl UnitSchemeReadWrite {
 
         UnitScheme::read_from(&structure.content)
     }
+}
+
+
+pub struct TableRecord<'a> {
+    pub container_name: String,
+    pub table_name: String,
+    pub id: Option<String>,
+    pub columns: Vec<TableRecordColumn<'a>>,
+}
+
+pub struct TableRecordColumn<'a> {
+    pub name: String,
+    pub col_type: UnitColumnType,
+    pub string_value: Option<&'a str>,
+    pub numeric_value: Option<&'a i64>,
 }

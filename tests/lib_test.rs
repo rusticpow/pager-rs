@@ -1,8 +1,7 @@
 use std::fs::{File, self};
 
 use pager_rs::{
-    unit_scheme::{UnitColumn, UnitColumnType, UnitScheme, UnitTable},
-    Api,
+    Api, structures::scheme_structure::{UnitScheme, UnitTable, UnitColumn, UnitColumnType}
 };
 use ulid::Ulid;
 

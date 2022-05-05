@@ -4,12 +4,13 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 
-use unit_scheme::{UnitScheme, unit_scheme_apply::UnitSchemeReadWrite};
+use structures::scheme_structure::UnitScheme;
+use unit_scheme::{unit_scheme_apply::UnitSchemeReadWrite};
 use page_manager::file_io::{FileIOImpl};
 
 mod page_manager;
 pub mod unit_scheme;
-mod table_manager;
+pub mod structures;
 
 pub struct Api {
 }
