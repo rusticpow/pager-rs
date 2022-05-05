@@ -8,7 +8,6 @@ use unit_scheme::{UnitScheme, unit_scheme_apply::UnitSchemeReadWrite};
 use page_manager::file_io::{FileIOImpl};
 
 mod page_manager;
-mod page_structure;
 pub mod unit_scheme;
 mod table_manager;
 
