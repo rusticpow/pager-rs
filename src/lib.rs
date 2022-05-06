@@ -2,6 +2,7 @@ extern crate lazy_static;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
+extern crate bincode;
 
 use structures::scheme_structure::UnitScheme;
 use unit_scheme::{unit_scheme_apply::UnitSchemeReadWrite};
