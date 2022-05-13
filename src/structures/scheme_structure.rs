@@ -1,6 +1,5 @@
 use serde::{Serialize, Deserialize};
 
-
 #[derive(Serialize, Deserialize)]
 pub struct UnitScheme {
     pub tables: Vec<UnitTable>,
@@ -17,6 +16,18 @@ impl UnitScheme {
     pub fn read_from(buffer: &[u8]) -> UnitScheme {
         let r = flexbuffers::Reader::get_root(buffer).unwrap();
         UnitScheme::deserialize(r).unwrap()
+    }
+
+    pub fn col_root_pid(&self, col_id: u32) -> Result<u32, &str> {
+        for table in self.tables.iter() {
+            for col in table.columns.iter() {
+                if col.id == col_id {
+                    return Ok(col.root_pid);
+                }
+            }
+        }
+
+        Err("Column not found")
     }
 }
 
@@ -38,5 +49,5 @@ pub struct UnitColumn {
     pub id: u32,
     pub name: String,
     pub col_type: UnitColumnType,
+    pub root_pid: u32
 }
-

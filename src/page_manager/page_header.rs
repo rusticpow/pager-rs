@@ -1,7 +1,6 @@
 use flexbuffers::{Reader, Builder};
 
-use super::file_io::{HEADER_CAPACITY, PageType};
-
+use super::file_io::{HEADER_CAPACITY, PageType, PAGE_SIZE};
 
 pub struct Header {
     pub page_type: PageType,
@@ -53,5 +52,13 @@ impl Header {
         for i in page_offset..(page_header_len + page_offset) {
             page_buf[i] = page_header[i - page_offset];
         }
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        let mut vec = vec![0; HEADER_CAPACITY];
+
+        self.write_into(&mut vec);
+
+        vec
     }
 }

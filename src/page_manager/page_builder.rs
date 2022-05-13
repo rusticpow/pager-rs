@@ -4,11 +4,11 @@ use crate::page_manager::file_io::{BODY_OFFSET, HEADER_CAPACITY};
 
 use super::{file_io::PAGE_SIZE, page_header::Header};
 
-struct PageBuilder {}
+pub struct PageBuilder {}
 
 impl PageBuilder {
     /// Build page in bytes with header and body (which length can be vary and must equals Header.body_size) and returns PAGE_SIZE length vector
-    fn build(header: &Header, body: Vec<u8>) -> Vec<u8> {
+    pub fn build(header: &Header, body: Vec<u8>) -> Vec<u8> {
         assert_eq!(body.len() as u16, header.body_size);
 
         let mut page: Vec<u8> = vec![0; PAGE_SIZE];
@@ -28,7 +28,7 @@ impl PageBuilder {
     }
 
     /// Read the whole page and return Header and body vector (that will equal the length set on Header.body_size)
-    fn separate(page: Vec<u8>) -> (Header, Vec<u8>) {
+    pub fn separate(page: Vec<u8>) -> (Header, Vec<u8>) {
         let header = Header::new(&page);
         let mut body: Vec<u8> = vec![0; header.body_size.into()];
 

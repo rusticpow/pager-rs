@@ -1,7 +1,8 @@
 use std::fs::{self};
 
 use pager_rs::{
-    Api, structures::scheme_structure::{UnitScheme, UnitTable, UnitColumn, UnitColumnType}
+    structures::scheme_structure::{UnitColumn, UnitColumnType, UnitScheme, UnitTable},
+    Api,
 };
 use ulid::Ulid;
 
@@ -18,6 +19,7 @@ fn test_schema_init() {
                     id: 7,
                     name: String::from("So cool string"),
                     col_type: UnitColumnType::String,
+                    root_pid: 2,
                 }],
             }],
         },

@@ -1,12 +1,13 @@
 use bincode::{config, Decode, Encode};
 
-#[derive(Decode, Encode, PartialEq, Debug)]
+#[derive(Decode, Encode, PartialEq, Debug, Clone, Copy)]
 pub struct RootStructure {
-    scheme_pid: u32,
-    events_pid: u32,
-    data_pid: u32,
-    free_pid: u32,
-    reserve0: u8,
+    pub scheme_pid: u32,
+    pub events_pid: u32,
+    pub events_last_pid: u32,
+    pub free_pid: u32,
+    pub vpm_pid: u32,
+    reserve0: u32,
     reserve1: u8,
     reserve2: u16,
     reserve4: u32,
@@ -15,10 +16,11 @@ pub struct RootStructure {
 }
 
 pub struct RootStructureInit {
-    scheme_pid: u32,
-    events_pid: u32,
-    data_pid: u32,
-    free_pid: u32,
+    pub scheme_pid: u32,
+    pub events_pid: u32,
+    pub events_last_pid: u32,
+    pub free_pid: u32,
+    pub vpm_pid: u32,
 }
 
 impl RootStructure {
@@ -26,8 +28,9 @@ impl RootStructure {
         RootStructure {
             scheme_pid: initial.scheme_pid,
             events_pid: initial.events_pid,
-            data_pid: initial.data_pid,
+            events_last_pid: initial.events_last_pid,
             free_pid: initial.free_pid,
+            vpm_pid: initial.vpm_pid,
             reserve0: 0,
             reserve1: 0,
             reserve2: 0,
@@ -65,8 +68,9 @@ mod tests {
         let root_struct = RootStructure::new(&RootStructureInit {
             scheme_pid: 1,
             events_pid: 2,
-            data_pid: 3,
+            events_last_pid: 2,
             free_pid: 4,
+            vpm_pid: 5
         });
 
         let encoded = root_struct.to_vec();
