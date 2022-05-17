@@ -1,9 +1,13 @@
 [package]
-name = "pager-rs"
+name = "pager_rs"
 version = "0.1.0"
 edition = "2021"
-
+crate-type = ["dylib"]
+targets=["aarch64-apple-darwin"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type=["rlib", "cdylib"]
 
 [dependencies]
 read_write_at = "0.1.0"
@@ -12,3 +16,7 @@ lazy_static = "1.4.0"
 ulid = "0.5.0"
 serde = "1.0.137"
 serde_derive = "1.0.137"
+libc = "0.2"
+tokio = { version = "1.0", features = ["full"] }
+ffi_helpers = "0.2"
+allo-isolate = "0.1.6"
